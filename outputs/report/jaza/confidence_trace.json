@@ -1,0 +1,32 @@
+{
+  "predicted_class": {
+    "id": 236,
+    "name": "Doberman"
+  },
+  "trace": [
+    {
+      "layer": "conv1",
+      "confidence": 0.0006426962208934128
+    },
+    {
+      "layer": "layer1",
+      "confidence": 0.000715079833753407
+    },
+    {
+      "layer": "layer2",
+      "confidence": 0.000731965119484812
+    },
+    {
+      "layer": "layer3",
+      "confidence": 0.000769966805819422
+    },
+    {
+      "layer": "layer4",
+      "confidence": 0.904248833656311
+    },
+    {
+      "layer": "final",
+      "confidence": 0.904248833656311
+    }
+  ]
+}

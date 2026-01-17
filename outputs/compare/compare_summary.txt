@@ -1,0 +1,6 @@
+A: input.jpg | top1=golden retriever prob=0.9543
+B: teska.jpg | top1=Tibetan terrier prob=0.3406
+
+Interpretation hint:
+- If A reaches high confidence earlier than B (in deeper blocks), A is 'easier' for the model.
+- If B stays low until late (or never gets high), it is 'harder' / ambiguous.

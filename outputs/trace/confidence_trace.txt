@@ -1,0 +1,11 @@
+Image: input.jpg
+Device: cpu
+Target (final top-1): Doberman (id=236)
+Gate: channels keep_ratio=0.25, spatial keep_ratio=0.15
+
+stem: raw=0.904249 | gate_channels=0.012962 | gate_spatial=0.000000
+layer1: raw=0.904249 | gate_channels=0.000038 | gate_spatial=0.000079
+layer2: raw=0.904249 | gate_channels=0.003594 | gate_spatial=0.001143
+layer3: raw=0.904249 | gate_channels=0.436940 | gate_spatial=0.009750
+layer4: raw=0.904249 | gate_channels=0.925048 | gate_spatial=0.095400
+final: raw=0.904249 | gate_channels=0.904249 | gate_spatial=0.904249

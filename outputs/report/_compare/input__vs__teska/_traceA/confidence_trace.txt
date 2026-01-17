@@ -1,0 +1,9 @@
+Target: golden retriever (id=207) final_prob=0.9543
+gate_topk_channels keep_ratio=0.25
+
+stem: 0.000028
+layer1: 0.000028
+layer2: 0.001924
+layer3: 0.049997
+layer4: 0.984557
+final: 0.954327

@@ -1,0 +1,8 @@
+Top-1: Persian cat (id=283) prob=0.9972
+
+Top-5:
+- Persian cat (id=283): 0.9972
+- lynx (id=287): 0.0017
+- tabby (id=281): 0.0004
+- Egyptian cat (id=285): 0.0001
+- tiger cat (id=282): 0.0001

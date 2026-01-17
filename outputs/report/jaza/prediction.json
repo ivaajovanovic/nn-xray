@@ -1,0 +1,35 @@
+{
+  "file": "jaza.jpg",
+  "top1": {
+    "id": 236,
+    "label": "Doberman",
+    "prob": 0.904248833656311
+  },
+  "top5": [
+    {
+      "id": 236,
+      "label": "Doberman",
+      "prob": 0.904248833656311
+    },
+    {
+      "id": 165,
+      "label": "black-and-tan coonhound",
+      "prob": 0.0492115393280983
+    },
+    {
+      "id": 237,
+      "label": "miniature pinscher",
+      "prob": 0.04305783286690712
+    },
+    {
+      "id": 234,
+      "label": "Rottweiler",
+      "prob": 0.0009933252586051822
+    },
+    {
+      "id": 178,
+      "label": "Weimaraner",
+      "prob": 0.0007795174606144428
+    }
+  ]
+}

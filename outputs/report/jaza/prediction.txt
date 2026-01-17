@@ -1,0 +1,8 @@
+Top-1: Doberman (id=236) prob=0.9042
+
+Top-5:
+- Doberman (id=236): 0.9042
+- black-and-tan coonhound (id=165): 0.0492
+- miniature pinscher (id=237): 0.0431
+- Rottweiler (id=234): 0.0010
+- Weimaraner (id=178): 0.0008

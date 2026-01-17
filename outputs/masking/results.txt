@@ -1,0 +1,7 @@
+Target class (baseline top-1): English foxhound (id=167) prob=0.2474
+Masking: top_percent=15% hottest CAM pixels
+
+After OCCLUDE hot region: prob(target)=0.0896
+New Top-1 after occlude: English foxhound (id=167) prob=0.0896
+
+After KEEP only hot region: prob(target)=0.0538

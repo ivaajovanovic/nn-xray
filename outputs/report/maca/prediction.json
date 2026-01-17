@@ -1,0 +1,35 @@
+{
+  "file": "maca.jpg",
+  "top1": {
+    "id": 283,
+    "label": "Persian cat",
+    "prob": 0.9972297549247742
+  },
+  "top5": [
+    {
+      "id": 283,
+      "label": "Persian cat",
+      "prob": 0.9972297549247742
+    },
+    {
+      "id": 287,
+      "label": "lynx",
+      "prob": 0.001656079781241715
+    },
+    {
+      "id": 281,
+      "label": "tabby",
+      "prob": 0.00038468983257189393
+    },
+    {
+      "id": 285,
+      "label": "Egyptian cat",
+      "prob": 0.00013935744937043637
+    },
+    {
+      "id": 282,
+      "label": "tiger cat",
+      "prob": 0.00013886962551623583
+    }
+  ]
+}

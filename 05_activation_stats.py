@@ -1,10 +1,10 @@
-import os
+import argparse
 from pathlib import Path
+import csv
 
 import torch
 from torchvision import models
 from PIL import Image
-import csv
 import matplotlib.pyplot as plt
 
 
@@ -22,12 +22,19 @@ def load_model(device):
 
 def main():
     print("=== ACTIVATION STATS CHECK ===")
-    os.makedirs("outputs/debug", exist_ok=True)
 
-    img_path = Path("input.jpg")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--image", required=True)
+    parser.add_argument("--out_dir", required=True)
+    args = parser.parse_args()
+
+    img_path = Path(args.image)
     if not img_path.exists():
-        print("[ERROR] Ne postoji input.jpg")
-        return
+        raise SystemExit(f"[ERROR] Image not found: {img_path}")
+
+    out_dir = Path(args.out_dir)
+    stats_dir = out_dir / "activation_stats"
+    stats_dir.mkdir(parents=True, exist_ok=True)
 
     device = get_device()
     model, preprocess = load_model(device)
@@ -53,7 +60,7 @@ def main():
 
     # 3) statistike
     rows = []
-    eps = 1e-6  # prag za "nula" u sparsity
+    eps = 1e-6
 
     for layer_name in sorted(activations.keys()):
         feat = activations[layer_name]  # (1,C,H,W)
@@ -62,7 +69,7 @@ def main():
         a = feat.abs()
         mean_abs = float(a.mean().cpu())
         max_abs = float(a.max().cpu())
-        sparsity = float((a < eps).float().mean().cpu())  # udeo skoro-nula
+        sparsity = float((a < eps).float().mean().cpu())
 
         rows.append({
             "layer": layer_name,
@@ -73,14 +80,13 @@ def main():
         })
 
     # 4) snimi CSV
-    csv_path = Path("outputs/debug/activation_stats.csv")
+    csv_path = stats_dir / "activation_stats.csv"
     with csv_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         writer.writeheader()
         writer.writerows(rows)
 
-    # 5) graf (mean_abs i sparsity po slojevima)
-    # (bez ručnog biranja boja)
+    # 5) graf
     x_idx = list(range(len(rows)))
     mean_abs_vals = [r["mean_abs"] for r in rows]
     sparsity_vals = [r["sparsity"] for r in rows]
@@ -95,7 +101,7 @@ def main():
     plt.legend()
     plt.tight_layout()
 
-    plot_path = Path("outputs/debug/activation_stats.png")
+    plot_path = stats_dir / "activation_stats.png"
     plt.savefig(plot_path, dpi=160)
     plt.close()
 
@@ -105,7 +111,7 @@ def main():
 
     print(f"Saved: {csv_path}")
     print(f"Saved: {plot_path}")
-    print("=== ACTIVATION STATS DONE ✅ ===")
+    print("=== ACTIVATION STATS DONE ===")
 
 
 if __name__ == "__main__":

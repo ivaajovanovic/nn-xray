@@ -1,5 +1,5 @@
-import os
 import json
+import argparse
 from pathlib import Path
 
 import torch
@@ -29,28 +29,27 @@ def predict_topk(model, preprocess, img_path: Path, device: torch.device, k: int
     probs = F.softmax(logits, dim=1)[0]  # (1000,)
 
     top_probs, top_idxs = torch.topk(probs, k)
-
     return top_idxs.cpu().tolist(), top_probs.cpu().tolist()
 
 
 def main():
     print("=== PREDICT CHECK ===")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--image", required=True, help="Path to input image")
+    parser.add_argument("--out_dir", required=True, help="Per-image output directory")
+    args = parser.parse_args()
 
-    # folders
-    os.makedirs("outputs/predictions", exist_ok=True)
-    os.makedirs("outputs/debug", exist_ok=True)
-
-    # input image
-    img_path = Path("input.jpg")
+    img_path = Path(args.image)
     if not img_path.exists():
-        print("[ERROR] Ne postoji input.jpg u folderu projekta.")
-        print("✅ Rešenje: stavi sliku i nazovi je input.jpg")
-        return
+        raise SystemExit(f"[ERROR] Image not found: {img_path}")
+
+    out_dir = Path(args.out_dir)
+    pred_dir = out_dir / "predictions"
+    pred_dir.mkdir(parents=True, exist_ok=True)
 
     device = get_device()
     model, preprocess, weights = load_model(device)
 
-    # labels (ImageNet class names)
     labels = weights.meta.get("categories", None)
 
     top_idxs, top_probs = predict_topk(model, preprocess, img_path, device, k=5)
@@ -63,15 +62,15 @@ def main():
     out = {
         "image": str(img_path),
         "device": str(device),
-        "top5": results
+        "top5": results,
     }
 
     # save json
-    json_path = Path("outputs/predictions/prediction.json")
+    json_path = pred_dir / "prediction.json"
     json_path.write_text(json.dumps(out, indent=2), encoding="utf-8")
 
-    # save txt (quick view)
-    txt_path = Path("outputs/predictions/prediction.txt")
+    # save txt
+    txt_path = pred_dir / "prediction.txt"
     lines = [f"Image: {img_path}", f"Device: {device}", "Top-5:"]
     for r in results:
         lines.append(f"- {r['class_name']} (id={r['class_id']}): {r['prob']:.4f}")
@@ -83,7 +82,7 @@ def main():
     for r in results:
         print(f"- {r['class_name']} (id={r['class_id']}): {r['prob']:.4f}")
 
-    print("=== PREDICT DONE ✅ ===")
+    print("=== PREDICT DONE ===")
 
 
 if __name__ == "__main__":

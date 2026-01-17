@@ -1,4 +1,0 @@
-MODEL OK
-Model: resnet18 (pretrained ImageNet)
-Device: cpu
-Output shape: (1, 1000)

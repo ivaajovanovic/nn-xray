@@ -1,4 +1,4 @@
-import os
+import argparse
 from pathlib import Path
 
 import torch
@@ -24,12 +24,19 @@ def load_model(device):
 
 def main():
     print("=== SALIENCY CHECK ===")
-    os.makedirs("outputs/heatmaps", exist_ok=True)
 
-    img_path = Path("input.jpg")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--image", required=True)
+    parser.add_argument("--out_dir", required=True)
+    args = parser.parse_args()
+
+    img_path = Path(args.image)
     if not img_path.exists():
-        print("[ERROR] Ne postoji input.jpg")
-        return
+        raise SystemExit(f"[ERROR] Image not found: {img_path}")
+
+    out_dir = Path(args.out_dir)
+    saliency_dir = out_dir / "saliency"
+    saliency_dir.mkdir(parents=True, exist_ok=True)
 
     device = get_device()
     model, preprocess, labels = load_model(device)
@@ -62,7 +69,7 @@ def main():
         sal = sal / sal.max()
     sal_np = sal.cpu().numpy()
 
-    # create 224 preview image (same crop as model input)
+    # create 224 preview image
     preview_only = transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),
@@ -71,7 +78,7 @@ def main():
     img_224_np = np.array(img_224).astype(np.float32) / 255.0
 
     # save saliency map
-    map_path = Path("outputs/heatmaps/saliency_map.png")
+    map_path = saliency_dir / "saliency_map.png"
     plt.figure(figsize=(4, 4))
     plt.imshow(sal_np, cmap="gray")
     plt.axis("off")
@@ -80,7 +87,7 @@ def main():
     plt.close()
 
     # overlay
-    overlay_path = Path("outputs/heatmaps/saliency_overlay.png")
+    overlay_path = saliency_dir / "saliency_overlay.png"
     plt.figure(figsize=(4, 4))
     plt.imshow(img_224_np)
     plt.imshow(sal_np, cmap="jet", alpha=0.45)
@@ -92,7 +99,7 @@ def main():
 
     print(f"Saved: {map_path}")
     print(f"Saved: {overlay_path}")
-    print("=== SALIENCY DONE ✅ ===")
+    print("=== SALIENCY DONE ===")
 
 
 if __name__ == "__main__":

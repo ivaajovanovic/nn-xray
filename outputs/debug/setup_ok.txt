@@ -1,4 +1,0 @@
-SETUP OK
-Time: 2026-01-12 21:44:46
-Device: cpu
-PyTorch: 2.1.1+cpu

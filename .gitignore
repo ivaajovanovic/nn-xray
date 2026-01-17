@@ -1,0 +1,48 @@
+# ================================
+# Python
+# ================================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+venv/
+
+# ================================
+# Editors / OS
+# ================================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ================================
+# Project folders (KEEP FOLDERS, IGNORE CONTENT)
+# ================================
+
+# data/jobs - keep folder, ignore all runs
+data/jobs/*
+!data/jobs/.gitkeep
+
+# outputs - keep structure, ignore generated files
+outputs/*
+!outputs/.gitkeep
+
+# inputs - keep folder, ignore user uploads
+inputs/*
+!inputs/.gitkeep
+
+# ================================
+# Generated files (extra safety)
+# ================================
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.tif
+*.tiff
+*.webp
+*.csv
+*.json
+*.log

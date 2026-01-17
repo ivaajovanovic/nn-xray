@@ -1,8 +1,0 @@
-Top-1: golden retriever (id=207) prob=0.9543
-
-Top-5:
-- golden retriever (id=207): 0.9543
-- Labrador retriever (id=208): 0.0112
-- Chesapeake Bay retriever (id=209): 0.0095
-- flat-coated retriever (id=205): 0.0091
-- Irish setter (id=213): 0.0022

@@ -1,4 +1,4 @@
-import os
+import argparse
 from pathlib import Path
 
 import torch
@@ -30,11 +30,10 @@ def predict_probs(model, x):
 
 
 def unnormalize_to_img01(x_chw):
-    # x_chw: (3,224,224) normalized
     mean = torch.tensor([0.485, 0.456, 0.406], dtype=x_chw.dtype, device=x_chw.device)[:, None, None]
     std  = torch.tensor([0.229, 0.224, 0.225], dtype=x_chw.dtype, device=x_chw.device)[:, None, None]
     img = (x_chw * std + mean).clamp(0, 1)
-    return img.permute(1, 2, 0).detach().cpu().numpy()  # (224,224,3) in [0,1]
+    return img.permute(1, 2, 0).detach().cpu().numpy()  # (224,224,3)
 
 
 # ----------------- gradcam -----------------
@@ -58,11 +57,11 @@ def gradcam_map(model, x, target_layer, class_idx):
     model.zero_grad(set_to_none=True)
     score.backward()
 
-    A = activ.detach()  # (1,C,H,W)
-    G = grad.detach()   # (1,C,H,W)
+    A = activ.detach()
+    G = grad.detach()
 
-    w = G.mean(dim=(2, 3), keepdim=True)           # (1,C,1,1)
-    cam = (w * A).sum(dim=1)                       # (1,H,W)
+    w = G.mean(dim=(2, 3), keepdim=True)
+    cam = (w * A).sum(dim=1)
     cam = F.relu(cam)[0]
     cam = cam - cam.min()
     if cam.max() > 0:
@@ -74,11 +73,10 @@ def gradcam_map(model, x, target_layer, class_idx):
     h1.remove()
     h2.remove()
 
-    return cam_up.detach().cpu().numpy()  # (224,224) in [0,1]
+    return cam_up.detach().cpu().numpy()  # (224,224)
 
 
 def cam_to_heat_rgb(cam):
-    # Simple "jet-ish" heatmap without seaborn; output in [0,1]
     c = cam
     heat = np.stack([c, np.square(c), 1 - c], axis=-1)
     heat = (heat - heat.min()) / (heat.max() - heat.min() + 1e-8)
@@ -166,42 +164,40 @@ def confidence_trace_for_image(model, preprocess, img_pil, device, keep_ratio=0.
 # ----------------- main -----------------
 def main():
     print("=== TWO IMAGE COMPARISON CHECK ===")
-    os.makedirs("outputs/compare", exist_ok=True)
 
-    in_dir = Path("inputs")
-    if not in_dir.exists():
-        in_dir.mkdir(parents=True, exist_ok=True)
-        print("[INFO] Kreiran inputs/. Ubaci TACNO 2 slike i pokreni opet.")
-        return
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--image_a", required=True)
+    parser.add_argument("--image_b", required=True)
+    parser.add_argument("--out_dir", required=True)
+    parser.add_argument("--keep_ratio", type=float, default=0.25)
+    args = parser.parse_args()
 
-    imgs = []
-    for ext in ("*.jpg", "*.jpeg", "*.png", "*.webp", "*.bmp"):
-        imgs += list(in_dir.glob(ext))
-    imgs = sorted(imgs)
+    imgA_path = Path(args.image_a)
+    imgB_path = Path(args.image_b)
+    if not imgA_path.exists():
+        raise SystemExit(f"[ERROR] image_a not found: {imgA_path}")
+    if not imgB_path.exists():
+        raise SystemExit(f"[ERROR] image_b not found: {imgB_path}")
 
-    if len(imgs) != 2:
-        print(f"[ERROR] U inputs/ mora biti TACNO 2 slike. Trenutno: {len(imgs)}")
-        for p in imgs:
-            print(" -", p.name)
-        return
+    out_dir = Path(args.out_dir)
+    compare_dir = out_dir / "compare"
+    compare_dir.mkdir(parents=True, exist_ok=True)
 
     device = get_device()
     model, preprocess, labels = load_model(device)
     target_layer = model.layer4[1].conv2
 
-    # Load images
-    imgA = Image.open(imgs[0]).convert("RGB")
-    imgB = Image.open(imgs[1]).convert("RGB")
+    imgA = Image.open(imgA_path).convert("RGB")
+    imgB = Image.open(imgB_path).convert("RGB")
 
-    # Compute per-image: pred + trace
-    keep_ratio = 0.25
+    keep_ratio = float(args.keep_ratio)
     infoA = confidence_trace_for_image(model, preprocess, imgA, device, keep_ratio=keep_ratio)
     infoB = confidence_trace_for_image(model, preprocess, imgB, device, keep_ratio=keep_ratio)
 
     nameA = labels[infoA["target_idx"]] if labels else f"class_{infoA['target_idx']}"
     nameB = labels[infoB["target_idx"]] if labels else f"class_{infoB['target_idx']}"
 
-    # Grad-CAM for each (for its own top-1)
+    # Grad-CAM for each (its own top-1)
     xA = infoA["x"].clone().detach().requires_grad_(True)
     camA = gradcam_map(model, xA, target_layer, infoA["target_idx"])
     imgA_224 = unnormalize_to_img01(xA[0])
@@ -220,16 +216,16 @@ def main():
 
     ax1 = plt.subplot(1, 2, 1)
     ax1.imshow(overlayA)
-    ax1.set_title(f"A: {imgs[0].name}\nTop-1: {nameA} ({infoA['target_prob']:.3f})")
+    ax1.set_title(f"A: {imgA_path.name}\nTop-1: {nameA} ({infoA['target_prob']:.3f})")
     ax1.axis("off")
 
     ax2 = plt.subplot(1, 2, 2)
     ax2.imshow(overlayB)
-    ax2.set_title(f"B: {imgs[1].name}\nTop-1: {nameB} ({infoB['target_prob']:.3f})")
+    ax2.set_title(f"B: {imgB_path.name}\nTop-1: {nameB} ({infoB['target_prob']:.3f})")
     ax2.axis("off")
 
     plt.tight_layout()
-    grad_path = Path("outputs/compare/compare_gradcam.png")
+    grad_path = compare_dir / "compare_gradcam.png"
     plt.savefig(grad_path, dpi=160)
     plt.close(fig)
 
@@ -238,8 +234,8 @@ def main():
     xs = list(range(len(cps)))
 
     fig2 = plt.figure(figsize=(9, 4))
-    plt.plot(xs, infoA["trace"], marker="o", label=f"A: {imgs[0].name}")
-    plt.plot(xs, infoB["trace"], marker="o", label=f"B: {imgs[1].name}")
+    plt.plot(xs, infoA["trace"], marker="o", label=f"A: {imgA_path.name}")
+    plt.plot(xs, infoB["trace"], marker="o", label=f"B: {imgB_path.name}")
     plt.xticks(xs, cps)
     plt.ylim(0.0, 1.0)
     plt.xlabel("Checkpoint (after block)")
@@ -247,28 +243,28 @@ def main():
     plt.title(f"Confidence trace (keep_ratio={keep_ratio})")
     plt.legend()
     plt.tight_layout()
-    trace_path = Path("outputs/compare/compare_confidence_trace.png")
+    trace_path = compare_dir / "compare_confidence_trace.png"
     plt.savefig(trace_path, dpi=160)
     plt.close(fig2)
 
     # --- Save summary ---
     summary = []
-    summary.append(f"A file: {imgs[0].name}")
+    summary.append(f"A file: {imgA_path.name}")
     summary.append(f"A top-1: {nameA} (id={infoA['target_idx']}) prob={infoA['target_prob']:.4f}")
     summary.append(f"A trace: {['%.4f' % v for v in infoA['trace']]}")
     summary.append("")
-    summary.append(f"B file: {imgs[1].name}")
+    summary.append(f"B file: {imgB_path.name}")
     summary.append(f"B top-1: {nameB} (id={infoB['target_idx']}) prob={infoB['target_prob']:.4f}")
     summary.append(f"B trace: {['%.4f' % v for v in infoB['trace']]}")
     summary.append("")
     summary.append(f"keep_ratio (channels): {keep_ratio}")
 
-    Path("outputs/compare/compare_summary.txt").write_text("\n".join(summary), encoding="utf-8")
+    (compare_dir / "compare_summary.txt").write_text("\n".join(summary), encoding="utf-8")
 
     print(f"Saved: {grad_path}")
     print(f"Saved: {trace_path}")
-    print("Saved: outputs/compare/compare_summary.txt")
-    print("=== TWO IMAGE COMPARISON DONE ✅ ===")
+    print(f"Saved: {compare_dir / 'compare_summary.txt'}")
+    print("=== TWO IMAGE COMPARISON DONE ===")
 
 
 if __name__ == "__main__":

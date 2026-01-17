@@ -1,9 +1,0 @@
-Target: Tibetan terrier (id=200) final_prob=0.3406
-gate_topk_channels keep_ratio=0.25
-
-stem: 0.000008
-layer1: 0.000000
-layer2: 0.000244
-layer3: 0.004822
-layer4: 0.488650
-final: 0.340561

@@ -1,6 +1,0 @@
-A: input.jpg -> golden retriever (p=0.9543)
-B: teska.jpg -> Tibetan terrier (p=0.3406)
-
-Interpretation hint:
-- A is 'easier' if its confidence rises earlier + ends high/stable.
-- B is 'harder' if confidence stays low longer / fluctuates / ends lower.

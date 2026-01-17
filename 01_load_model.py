@@ -1,4 +1,4 @@
-import os
+import argparse
 from pathlib import Path
 
 import torch
@@ -10,7 +10,13 @@ def get_device() -> torch.device:
 
 
 def main():
-    os.makedirs("outputs/debug", exist_ok=True)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--out_dir", default="outputs", help="Root output directory")
+    args = parser.parse_args()
+
+    out_root = Path(args.out_dir)
+    debug_dir = out_root / "debug"
+    debug_dir.mkdir(parents=True, exist_ok=True)
 
     device = get_device()
     print("=== LOAD MODEL CHECK ===")
@@ -30,17 +36,17 @@ def main():
     print(f"Output shape: {tuple(out.shape)} (expected: (1, 1000))")
 
     # 4) Save a tiny debug file
-    info_path = Path("outputs/debug/model_ok.txt")
+    info_path = debug_dir / "model_ok.txt"
     info_path.write_text(
         f"MODEL OK\n"
         f"Model: resnet18 (pretrained ImageNet)\n"
         f"Device: {device}\n"
         f"Output shape: {tuple(out.shape)}\n",
-        encoding="utf-8"
+        encoding="utf-8",
     )
 
     print(f"Saved: {info_path}")
-    print("=== MODEL LOAD DONE ✅ ===")
+    print("=== MODEL LOAD DONE ===")
 
 
 if __name__ == "__main__":

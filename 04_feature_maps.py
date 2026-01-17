@@ -1,4 +1,4 @@
-import os
+import argparse
 from pathlib import Path
 
 import torch
@@ -19,16 +19,7 @@ def load_model(device: torch.device):
     return model, preprocess
 
 
-def ensure_dirs():
-    os.makedirs("outputs/features", exist_ok=True)
-    os.makedirs("outputs/debug", exist_ok=True)
-
-
 def save_feature_grid(feat: torch.Tensor, out_path: Path, max_channels: int = 16):
-    """
-    feat: (1, C, H, W)
-    snima grid prvih max_channels kanala kao jednu sliku.
-    """
     feat = feat[0]  # (C, H, W)
     C, H, W = feat.shape
     n = min(C, max_channels)
@@ -41,7 +32,6 @@ def save_feature_grid(feat: torch.Tensor, out_path: Path, max_channels: int = 16
         ax = plt.subplot(rows, cols, i + 1)
         fm = feat[i].detach().cpu().numpy()
 
-        # normalizacija da izgleda lepo (0..1)
         fm = fm - fm.min()
         if fm.max() > 0:
             fm = fm / fm.max()
@@ -57,63 +47,63 @@ def save_feature_grid(feat: torch.Tensor, out_path: Path, max_channels: int = 16
 
 def main():
     print("=== FEATURE MAPS CHECK ===")
-    ensure_dirs()
 
-    img_path = Path("input.jpg")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--image", required=True)
+    parser.add_argument("--out_dir", required=True)
+    args = parser.parse_args()
+
+    img_path = Path(args.image)
     if not img_path.exists():
-        print("[ERROR] Ne postoji input.jpg")
-        return
+        raise SystemExit(f"[ERROR] Image not found: {img_path}")
+
+    out_dir = Path(args.out_dir)
+    features_dir = out_dir / "feature_maps"
+    debug_dir = out_dir / "debug"
+    features_dir.mkdir(parents=True, exist_ok=True)
+    debug_dir.mkdir(parents=True, exist_ok=True)
 
     device = get_device()
     model, preprocess = load_model(device)
 
-    # 1) Hook storage
-    activations = {}  # name -> tensor
-
-    # 2) Register hooks for Conv2d layers
+    activations = {}
     hooks = []
+
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d):
             def make_hook(layer_name):
-                def hook_fn(_module, _inp, out):
+                def hook_fn(_m, _inp, out):
                     activations[layer_name] = out
                 return hook_fn
-
             hooks.append(module.register_forward_hook(make_hook(name)))
 
     print(f"Registered hooks on {len(hooks)} Conv2d layers")
 
-    # 3) Forward pass
     img = Image.open(img_path).convert("RGB")
     x = preprocess(img).unsqueeze(0).to(device)
 
     with torch.no_grad():
         _ = model(x)
 
-    # 4) Save feature grids
-    # sortiramo po imenu da redosled bude stabilan
     saved = 0
     for layer_name in sorted(activations.keys()):
-        feat = activations[layer_name]  # (1,C,H,W)
-        out_file = Path("outputs/features") / f"{saved:02d}_{layer_name.replace('.', '_')}.png"
+        feat = activations[layer_name]
+        out_file = features_dir / f"{saved:02d}_{layer_name.replace('.', '_')}.png"
         save_feature_grid(feat, out_file, max_channels=16)
         saved += 1
 
-    # 5) Cleanup hooks
     for h in hooks:
         h.remove()
 
-    # 6) Debug summary
-    summary_path = Path("outputs/debug/feature_maps_ok.txt")
+    summary_path = debug_dir / "feature_maps_ok.txt"
     lines = [f"Total conv layers captured: {len(activations)}", "Layers:"]
     for k in sorted(activations.keys()):
-        shape = tuple(activations[k].shape)
-        lines.append(f"- {k}: {shape}")
+        lines.append(f"- {k}: {tuple(activations[k].shape)}")
     summary_path.write_text("\n".join(lines), encoding="utf-8")
 
-    print(f"Saved {saved} feature-map grids to outputs/features/")
+    print(f"Saved {saved} feature-map grids to {features_dir}")
     print(f"Saved: {summary_path}")
-    print("=== FEATURE MAPS DONE ✅ ===")
+    print("=== FEATURE MAPS DONE ===")
 
 
 if __name__ == "__main__":

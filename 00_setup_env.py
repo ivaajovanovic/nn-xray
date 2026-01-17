@@ -16,23 +16,27 @@ def main():
     # Device
     if torch.cuda.is_available():
         device = torch.device("cuda")
-        print(f"CUDA available ✅ | GPU: {torch.cuda.get_device_name(0)}")
+        print(f"CUDA available GPU: {torch.cuda.get_device_name(0)}")
     else:
         device = torch.device("cpu")
-        print("CUDA not available ⚠️ | Using CPU")
+        print("CUDA not available. Using CPU")
 
-    # Folder structure
+    # ✅ FIX: definisana lista foldera
     folders = [
         "outputs",
+        "outputs/input",
+        "outputs/predictions",
         "outputs/features",
         "outputs/heatmaps",
-        "outputs/debug"
+        "outputs/trace",
+        "outputs/debug",
+        "data/jobs",
     ]
 
-    for folder in folders:
-        os.makedirs(folder, exist_ok=True)
+    for f in folders:
+        os.makedirs(f, exist_ok=True)
 
-    # Write sanity file
+    # Sanity file
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     sanity_path = "outputs/debug/setup_ok.txt"
     with open(sanity_path, "w", encoding="utf-8") as f:
@@ -41,7 +45,7 @@ def main():
         f.write(f"Device: {device}\n")
         f.write(f"PyTorch: {torch.__version__}\n")
 
-    print("Folders created ✅")
+    print("Folders created")
     print(f"Sanity file written: {sanity_path}")
     print("=== SETUP DONE ===")
 

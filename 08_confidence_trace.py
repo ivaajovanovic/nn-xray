@@ -1,4 +1,4 @@
-import os
+import argparse
 from pathlib import Path
 import csv
 
@@ -114,12 +114,21 @@ def forward_from_checkpoint(model, z, start_cp):
 # ----------------- main -----------------
 def main():
     print("=== CONFIDENCE TRACE (GATED) CHECK ===")
-    os.makedirs("outputs/trace", exist_ok=True)
 
-    img_path = Path("input.jpg")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--image", required=True)
+    parser.add_argument("--out_dir", required=True)
+    parser.add_argument("--keep_ch_ratio", type=float, default=0.25)
+    parser.add_argument("--keep_sp_ratio", type=float, default=0.15)
+    args = parser.parse_args()
+
+    img_path = Path(args.image)
     if not img_path.exists():
-        print("[ERROR] Ne postoji input.jpg u folderu projekta.")
-        return
+        raise SystemExit(f"[ERROR] Image not found: {img_path}")
+
+    out_dir = Path(args.out_dir)
+    trace_dir = out_dir / "trace"
+    trace_dir.mkdir(parents=True, exist_ok=True)
 
     device = get_device()
     model, preprocess, labels = load_model(device)
@@ -134,33 +143,28 @@ def main():
     target_name = labels[target_idx] if labels else f"class_{target_idx}"
     print(f"Target (final top-1): {target_name} (id={target_idx}) prob={target_prob:.4f}")
 
-    # 1) capture checkpoint tensors
     acts = forward_checkpoints(model, x)
     checkpoints = ["stem", "layer1", "layer2", "layer3", "layer4", "final"]
 
-    # 2) compute traces
-    keep_ch_ratio = 0.25   # 25% top channels (dobro za demo)
-    keep_sp_ratio = 0.15   # 15% top spatial positions
+    keep_ch_ratio = float(args.keep_ch_ratio)
+    keep_sp_ratio = float(args.keep_sp_ratio)
 
     rows = []
     for cp in checkpoints:
         if cp == "final":
             p_raw = float(probs_final[target_idx].item())
-            p_ch  = p_raw
-            p_sp  = p_raw
+            p_ch = p_raw
+            p_sp = p_raw
         else:
             z = acts[cp]
 
-            # RAW (kontrola)
             probs_raw = forward_from_checkpoint(model, z, cp)
             p_raw = float(probs_raw[target_idx].item())
 
-            # GATE channels (ovo pravi "trace" koji se menja)
             z_ch = gate_topk_channels(z, keep_ratio=keep_ch_ratio)
             probs_ch = forward_from_checkpoint(model, z_ch, cp)
             p_ch = float(probs_ch[target_idx].item())
 
-            # GATE spatial (opciono)
             z_sp = gate_topk_spatial(z, keep_ratio=keep_sp_ratio)
             probs_sp = forward_from_checkpoint(model, z_sp, cp)
             p_sp = float(probs_sp[target_idx].item())
@@ -173,14 +177,14 @@ def main():
         })
 
     # Save CSV
-    csv_path = Path("outputs/trace/confidence_trace.csv")
+    csv_path = trace_dir / "confidence_trace.csv"
     with csv_path.open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=["checkpoint", "p_raw", "p_gate_channels", "p_gate_spatial"])
         w.writeheader()
         w.writerows(rows)
 
     # Save TXT
-    txt_path = Path("outputs/trace/confidence_trace.txt")
+    txt_path = trace_dir / "confidence_trace.txt"
     lines = [
         f"Image: {img_path}",
         f"Device: {device}",
@@ -195,12 +199,12 @@ def main():
     txt_path.write_text("\n".join(lines), encoding="utf-8")
 
     # Plot
-    plot_path = Path("outputs/trace/confidence_trace.png")
+    plot_path = trace_dir / "confidence_trace.png"
     xs = list(range(len(rows)))
     xlabels = [r["checkpoint"] for r in rows]
     y_raw = [r["p_raw"] for r in rows]
-    y_ch  = [r["p_gate_channels"] for r in rows]
-    y_sp  = [r["p_gate_spatial"] for r in rows]
+    y_ch = [r["p_gate_channels"] for r in rows]
+    y_sp = [r["p_gate_spatial"] for r in rows]
 
     plt.figure(figsize=(9, 4))
     plt.plot(xs, y_raw, marker="o", label="raw (control)")
@@ -219,7 +223,7 @@ def main():
     print(f"Saved: {csv_path}")
     print(f"Saved: {txt_path}")
     print(f"Saved: {plot_path}")
-    print("=== CONFIDENCE TRACE DONE ✅ ===")
+    print("=== CONFIDENCE TRACE DONE ===")
 
 
 if __name__ == "__main__":
